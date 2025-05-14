@@ -1,8 +1,12 @@
 {
   "name": "uni-lala",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "一个uniapp请求工具，promisify，类axios，带拦截器",
-  "keywords": ["uniapp", "uni-request", "uni.request"],
+  "keywords": [
+    "uniapp",
+    "uni-request",
+    "uni.request"
+  ],
   "main": "index.js",
   "author": "Yang Chuan",
   "repository": {
