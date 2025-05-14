@@ -102,10 +102,6 @@ function createInstance(defaultOptions, makeRequest) {
   const interceptors = createInterceptors()
 
   function _request(options) {
-    _request.lock = interceptors.request.lock
-    _request.unlock = interceptors.request.unlock
-    _request.cancel = interceptors.request.cancel
-
     return new Promise((resolve, reject) => {
       enqueueIfLocked(interceptors.request.p, async () => {
         const originConfig = mergeOptions(options, defaultOptions)
@@ -135,6 +131,11 @@ function createInstance(defaultOptions, makeRequest) {
       })
     })
   }
+
+  _request.interceptors = interceptors
+  _request.lock = interceptors.request.lock
+  _request.unlock = interceptors.request.unlock
+  _request.cancel = interceptors.request.cancel
 
   ['get', 'post', 'put', 'delete', 'connect', 'head', 'options', 'trace'].forEach(method => {
     _request[method] = (url, data, options) => _request({
