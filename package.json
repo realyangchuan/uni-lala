@@ -1,0 +1,14 @@
+{
+  "name": "uni-lala",
+  "version": "1.0.0",
+  "description": "一个uniapp请求工具，promisify，类axios，带拦截器",
+  "keywords": ["uniapp", "uni-request", "uni.request"],
+  "main": "index.js",
+  "author": "Yang Chuan",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/realyangchuan/uni-lala.git"
+  },
+  "license": "ISC",
+  "type": "module"
+}
