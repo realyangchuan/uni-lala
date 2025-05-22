@@ -137,7 +137,9 @@ function createInstance(defaultOptions, makeRequest) {
   _request.unlock = interceptors.request.unlock
   _request.cancel = interceptors.request.cancel
 
-  ['get', 'post', 'put', 'delete', 'connect', 'head', 'options', 'trace'].forEach(method => {
+  const methods = ['get', 'post', 'put', 'delete', 'connect', 'head', 'options', 'trace']
+
+  methods.forEach(method => {
     _request[method] = (url, data, options) => _request({
       url,
       data,
