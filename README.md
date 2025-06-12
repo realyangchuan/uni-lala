@@ -50,9 +50,9 @@ requestInstance.interceptors.response.use(
   function(response, options) {
     // 内部可以异步处理逻辑
 
-    // requestInstance.interceptors.response.lock()
-    // requestInstance.interceptors.response.unlock()
-    // requestInstance.interceptors.response.cancel()
+    // requestInstance.lock()
+    // requestInstance.unlock()
+    // requestInstance.cancel()
 
     // 返不返回都行
     return response

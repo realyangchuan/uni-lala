@@ -1,14 +1,17 @@
-function handleInterceptor(interceptor) {
+function createInterceptors() {
   let _resolve = null
   let _reject = null
-  interceptor.p = null
+
+  const ret = {
+    p: null
+  }
 
   function _reset() {
-    interceptor.p = _resolve = _reject = null
+    ret.p = _resolve = _reject = null
   }
 
   function lock() {
-    interceptor.p = new Promise((resolve, reject) => {
+    ret.p = new Promise((resolve, reject) => {
       _resolve = resolve
       _reject = reject
     })
@@ -23,16 +26,15 @@ function handleInterceptor(interceptor) {
 
   function cancel() {
     if (_reject) {
-      _reject(new Error('canceled'))
+      _reject('canceled')
       _reset()
     }
   }
 
-  Object.assign(interceptor, { lock, unlock, cancel })
-}
-
-function createInterceptors() {
-  const interceptors = {
+  ret.interceptors = {
+    lock,
+    unlock,
+    cancel,
     request: {
       use(handler) {
         this.handler = handler
@@ -46,10 +48,7 @@ function createInterceptors() {
     }
   }
 
-  handleInterceptor(interceptors.request)
-  handleInterceptor(interceptors.response)
-
-  return interceptors
+  return ret
 }
 
 function enqueueIfLocked(p, cb) {
@@ -99,43 +98,37 @@ function mergeOptions(target, source, root = true) {
 }
 
 function createInstance(defaultOptions, makeRequest) {
-  const interceptors = createInterceptors()
+  const interceptorsContainer = createInterceptors()
+  const { interceptors } = interceptorsContainer
 
   function _request(options) {
     return new Promise((resolve, reject) => {
-      enqueueIfLocked(interceptors.request.p, async () => {
+      enqueueIfLocked(interceptorsContainer.p, async () => {
         const originConfig = mergeOptions(options, defaultOptions)
-        const config =
-          (await Promise.resolve(
-            interceptors.request.handler?.(originConfig)
-          )) ?? originConfig
+        const config = (await Promise.resolve(interceptors.request.handler?.(originConfig))) ?? originConfig
         makeRequest(config)
-          .then(response => {
-            enqueueIfLocked(interceptors.response.p, async () => {
-              const res =
-                (await Promise.resolve(
-                  interceptors.response.handler?.(response, config)
-                )) ?? response
-              resolve(res)
-            })
-          })
-          .catch(error => {
-            enqueueIfLocked(interceptors.response.p, async () => {
-              const err =
-                (await Promise.resolve(
-                  interceptors.response.errHandler?.(error, config)
-                )) ?? error
-              reject(err)
-            })
-          })
+          .then(
+            response => {
+              enqueueIfLocked(interceptorsContainer.p, async () => {
+                const res = (await Promise.resolve(interceptors.response.handler?.(response, config)))
+                resolve(res ?? response)
+              })
+            },
+            async error => {
+              enqueueIfLocked(interceptorsContainer.p, async () => {
+                const err = (await Promise.resolve(interceptors.response.errHandler?.(error, config)))
+                reject(err ?? error)
+              })
+            }
+          )
       })
     })
   }
 
   _request.interceptors = interceptors
-  _request.lock = interceptors.request.lock
-  _request.unlock = interceptors.request.unlock
-  _request.cancel = interceptors.request.cancel
+  _request.lock = interceptors.lock
+  _request.unlock = interceptors.unlock
+  _request.cancel = interceptors.cancel
 
   const methods = ['get', 'post', 'put', 'delete', 'connect', 'head', 'options', 'trace']
 
@@ -151,9 +144,9 @@ function createInstance(defaultOptions, makeRequest) {
   return _request
 }
 
-function handleRequestApi(requestApi, options) {
+function uniRequest(options) {
   return new Promise((resolve, reject) => {
-    requestApi({
+    uni.request({
       ...options,
       async success(res) {
         resolve((await options.success?.(res)) ?? res)
@@ -166,10 +159,6 @@ function handleRequestApi(requestApi, options) {
       }
     })
   })
-}
-
-function uniRequest(options) {
-  return handleRequestApi(uni.request, options)
 }
 
 export default createInstance({}, uniRequest)
