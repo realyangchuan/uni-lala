@@ -1,6 +1,6 @@
 {
   "name": "uni-lala",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "一个uniapp请求工具，promisify，类axios，带拦截器",
   "keywords": [
     "uniapp",
