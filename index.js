@@ -101,7 +101,7 @@ function mergeOptions(target, source, root = true) {
 }
 
 function innerRequest(type, { method, ...options }) {
-  if (COMMON_REQUEST_METHODS.includes(type)) {
+  if (COMMON_REQUEST_METHODS.includes(method)) {
     options.method = method
   }
 
