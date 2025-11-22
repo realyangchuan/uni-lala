@@ -1,3 +1,6 @@
+const COMMON_REQUEST_METHODS = ['get', 'post', 'put', 'delete', 'connect', 'head', 'options', 'trace']
+const FILE_REQUEST_METHODS = ['uploadFile', 'downloadFile']
+
 function createInterceptors() {
   let _resolve = null
   let _reject = null
@@ -97,56 +100,14 @@ function mergeOptions(target, source, root = true) {
   return res
 }
 
-function createInstance(defaultOptions, makeRequest) {
-  const interceptorsContainer = createInterceptors()
-  const { interceptors } = interceptorsContainer
-
-  function _request(options) {
-    return new Promise((resolve, reject) => {
-      enqueueIfLocked(interceptorsContainer.p, async () => {
-        const originConfig = mergeOptions(options, defaultOptions)
-        const config = (await Promise.resolve(interceptors.request.handler?.(originConfig))) ?? originConfig
-        makeRequest(config)
-          .then(
-            response => {
-              enqueueIfLocked(interceptorsContainer.p, async () => {
-                const res = (await Promise.resolve(interceptors.response.handler?.(response, config)))
-                resolve(res ?? response)
-              })
-            },
-            async error => {
-              enqueueIfLocked(interceptorsContainer.p, async () => {
-                const err = (await Promise.resolve(interceptors.response.errHandler?.(error, config)))
-                reject(err ?? error)
-              })
-            }
-          )
-      })
-    })
+function innerRequest(type, { method, ...options }) {
+  if (COMMON_REQUEST_METHODS.includes(type)) {
+    options.method = method
   }
 
-  _request.interceptors = interceptors
-  _request.lock = interceptors.lock
-  _request.unlock = interceptors.unlock
-  _request.cancel = interceptors.cancel
-
-  const methods = ['get', 'post', 'put', 'delete', 'connect', 'head', 'options', 'trace']
-
-  methods.forEach(method => {
-    _request[method] = (url, data, options) => _request({
-      url,
-      data,
-      ...options,
-      method: method.toUpperCase()
-    })
-  })
-
-  return _request
-}
-
-function uniRequest(options) {
   return new Promise((resolve, reject) => {
-    uni.request({
+    // 'request' | 'uploadFile' | 'downloadFile'
+    uni[type]({
       ...options,
       async success(res) {
         resolve((await options.success?.(res)) ?? res)
@@ -161,8 +122,68 @@ function uniRequest(options) {
   })
 }
 
-export default createInstance({}, uniRequest)
+function createInstance(defaultOptions) {
+  const interceptorsContainer = createInterceptors()
+  const { interceptors } = interceptorsContainer
+
+  function _request(options) {
+    return new Promise((resolve, reject) => {
+      enqueueIfLocked(interceptorsContainer.p, async () => {
+        const originConfig = mergeOptions(options, defaultOptions)
+        const config = (await Promise.resolve(interceptors.request.handler?.(originConfig))) ?? originConfig
+
+        function resolveCallback(response) {
+          enqueueIfLocked(interceptorsContainer.p, async () => {
+            const res = (await Promise.resolve(interceptors.response.handler?.(response, config)))
+            resolve(res ?? response)
+          })
+        }
+
+        async function rejectCallback(error) {
+          enqueueIfLocked(interceptorsContainer.p, async () => {
+            const err = (await Promise.resolve(interceptors.response.errHandler?.(error, config)))
+            reject(err ?? error)
+          })
+        }
+
+        if (COMMON_REQUEST_METHODS.includes(config.method?.toLowerCase())) {
+          innerRequest('request', config).then(resolveCallback, rejectCallback)
+        } else if (FILE_REQUEST_METHODS.includes(config.method)) {
+          innerRequest(config.method, config).then(resolveCallback, rejectCallback)
+        } else {
+          reject(new Error('method is not supported or WRONG invoke style.'))
+        }
+      })
+    })
+  }
+
+  _request.interceptors = interceptors
+  _request.lock = interceptors.lock
+  _request.unlock = interceptors.unlock
+  _request.cancel = interceptors.cancel
+
+  COMMON_REQUEST_METHODS.forEach(method => {
+    _request[method] = (url, data, options) => _request({
+      url,
+      data,
+      ...options,
+      method: method.toUpperCase()
+    })
+  })
+
+  FILE_REQUEST_METHODS.forEach(method => {
+    _request[method] = (url, options) => _request({
+      url,
+      ...options,
+      method
+    })
+  })
+
+  return _request
+}
+
+export default createInstance({})
 
 export function create(defaultOptions = {}) {
-  return createInstance(defaultOptions, uniRequest)
+  return createInstance(defaultOptions)
 }
