@@ -100,11 +100,7 @@ function mergeOptions(target, source, root = true) {
   return res
 }
 
-function innerRequest(type, { method, ...options }) {
-  if (COMMON_REQUEST_METHODS.includes(method)) {
-    options.method = method
-  }
-
+function innerRequest(type, options) {
   return new Promise((resolve, reject) => {
     // 'request' | 'uploadFile' | 'downloadFile'
     uni[type]({
@@ -146,10 +142,12 @@ function createInstance(defaultOptions) {
           })
         }
 
-        if (COMMON_REQUEST_METHODS.includes(config.method?.toLowerCase())) {
+        const { method, ...optionsExceptMethod } = config
+
+        if (!method || COMMON_REQUEST_METHODS.includes(method.toLowerCase())) {
           innerRequest('request', config).then(resolveCallback, rejectCallback)
-        } else if (FILE_REQUEST_METHODS.includes(config.method)) {
-          innerRequest(config.method, config).then(resolveCallback, rejectCallback)
+        } else if (FILE_REQUEST_METHODS.includes(method)) {
+          innerRequest(method, optionsExceptMethod).then(resolveCallback, rejectCallback)
         } else {
           reject(new Error('method is not supported or WRONG invoke style.'))
         }
