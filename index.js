@@ -130,14 +130,14 @@ function createInstance(defaultOptions) {
 
         function resolveCallback(response) {
           enqueueIfLocked(interceptorsContainer.p, async () => {
-            const res = (await Promise.resolve(interceptors.response.handler?.(response, config)))
+            const res = (await Promise.resolve(interceptors.response.handler?.(response, config, options)))
             resolve(res ?? response)
           })
         }
 
         async function rejectCallback(error) {
           enqueueIfLocked(interceptorsContainer.p, async () => {
-            const err = (await Promise.resolve(interceptors.response.errHandler?.(error, config)))
+            const err = (await Promise.resolve(interceptors.response.errHandler?.(error, config, options)))
             reject(err ?? error)
           })
         }
