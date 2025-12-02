@@ -100,10 +100,9 @@ function mergeOptions(target, source, root = true) {
   return res
 }
 
-function innerRequest(type, options) {
+function innerRequest(requestType, options) {
   return new Promise((resolve, reject) => {
-    // 'request' | 'uploadFile' | 'downloadFile'
-    uni[type]({
+    requestType({
       ...options,
       async success(res) {
         resolve((await options.success?.(res)) ?? res)
@@ -145,9 +144,11 @@ function createInstance(defaultOptions) {
         const { method, ...optionsExceptMethod } = config
 
         if (!method || COMMON_REQUEST_METHODS.includes(method.toLowerCase())) {
-          innerRequest('request', config).then(resolveCallback, rejectCallback)
-        } else if (FILE_REQUEST_METHODS.includes(method)) {
-          innerRequest(method, optionsExceptMethod).then(resolveCallback, rejectCallback)
+          innerRequest(uni.request, config).then(resolveCallback, rejectCallback)
+        } else if (method === 'uploadFile') {
+          innerRequest(uni.uploadFile, optionsExceptMethod).then(resolveCallback, rejectCallback)
+        } else if (method === 'downloadFile') {
+          innerRequest(uni.downloadFile, optionsExceptMethod).then(resolveCallback, rejectCallback)
         } else {
           reject(new Error('method is not supported or WRONG invoke style.'))
         }
